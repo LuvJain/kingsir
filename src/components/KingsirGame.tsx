@@ -1,122 +1,124 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Button } from 'react-native';
-import { GameState, Card as CardType, Suit, Player } from '../types';
-import { initializeGame, validateDeclaration, selectTrumpSuit, playCard, scoreRound } from '../utils/gameLogic';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { GameManager } from '../models/GameManager';
+import { Card, Suit } from '../models/Card';
 import { PlayerHand } from './PlayerHand';
-import { GameTable } from './GameTable';
-import { DeclarationModal } from './DeclarationModal';
-
-const PLAYER_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+import { PlayedCards } from './PlayedCards';
+import { Scoreboard } from './Scoreboard';
 
 export const KingsirGame: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>(initializeGame(PLAYER_NAMES));
-  const [showDeclarationModal, setShowDeclarationModal] = useState(false);
+  const [gameManager, setGameManager] = useState<GameManager | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<'setup' | 'bidding' | 'playing' | 'scoring'>('setup');
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   useEffect(() => {
-    if (gameState.gamePhase === 'gameOver') {
-      alert('Game Over! Final Scores:\n' + gameState.players.map(p => `${p.name}: ${p.score}`).join('\n'));
-    }
-  }, [gameState.gamePhase]);
-
-  const handleDeclaration = (declaration: number) => {
-    if (validateDeclaration(gameState, gameState.players[gameState.currentPlayerIndex].id, declaration)) {
-      const updatedPlayers = gameState.players.map((player, index) =>
-        index === gameState.currentPlayerIndex ? { ...player, declaredSirs: declaration } : player
-      );
-      const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-      const allDeclared = nextPlayerIndex === 0;
-
-      setGameState({
-        ...gameState,
-        players: updatedPlayers,
-        currentPlayerIndex: nextPlayerIndex,
-        gamePhase: allDeclared ? 'selectingTrump' : 'declaring',
+    if (!gameManager) {
+      Alert.prompt('Number of Players', 'Enter the number of players (3-6):', (numPlayersStr) => {
+        const numPlayers = parseInt(numPlayersStr, 10);
+        if (numPlayers >= 3 && numPlayers <= 6) {
+          const playerNames = Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
+          const newGameManager = new GameManager(playerNames);
+          newGameManager.startNewRound();
+          setGameManager(newGameManager);
+          setCurrentPhase('bidding');
+        } else {
+          Alert.alert('Invalid Input', 'Please enter a number between 3 and 6.');
+        }
       });
+    }
+  }, [gameManager]);
+
+  const handleBid = (playerIndex: number) => {
+    if (!gameManager) return;
+
+    Alert.prompt('Declare Sirs', `${gameManager.players[playerIndex].name}, how many sirs do you declare?`, (sirsStr) => {
+      const sirs = parseInt(sirsStr, 10);
+      if (isNaN(sirs) || sirs < 0 || sirs > gameManager.players[playerIndex].hand.length) {
+        Alert.alert('Invalid Bid', 'Please enter a valid number of sirs.');
+        return;
+      }
+
+      const validBid = gameManager.declareSirs(playerIndex, sirs);
+      if (!validBid) {
+        Alert.alert('Invalid Bid', 'The total declared sirs cannot equal the number of cards. Please choose a different number.');
+        return;
+      }
+
+      const nextPlayerIndex = (playerIndex + 1) % gameManager.players.length;
+      if (nextPlayerIndex === 0) {
+        setCurrentPhase('playing');
+        const highestBidder = gameManager.players.reduce((prev, current) => (current.declaredSirs > prev.declaredSirs ? current : prev));
+        Alert.alert('Select Trump Suit', `${highestBidder.name}, select the trump suit.`, [
+          { text: 'Hearts', onPress: () => gameManager.setTrumpSuit(Suit.Hearts) },
+          { text: 'Diamonds', onPress: () => gameManager.setTrumpSuit(Suit.Diamonds) },
+          { text: 'Clubs', onPress: () => gameManager.setTrumpSuit(Suit.Clubs) },
+          { text: 'Spades', onPress: () => gameManager.setTrumpSuit(Suit.Spades) },
+        ]);
+      } else {
+        gameManager.currentPlayerIndex = nextPlayerIndex;
+        setGameManager(gameManager);
+      }
+    });
+  };
+
+  const handleCardPlay = (card: Card) => {
+    if (!gameManager || currentPhase !== 'playing') return;
+
+    const validPlay = gameManager.playCard(gameManager.currentPlayerIndex, card);
+    if (!validPlay) {
+      Alert.alert('Invalid Play', 'You must follow the leading suit if possible.');
+      return;
+    }
+
+    setSelectedCard(null);
+
+    if (gameManager.playedCards.length === gameManager.players.length) {
+      setTimeout(() => {
+        gameManager.scoreRound();
+        if (gameManager.isGameOver()) {
+          setCurrentPhase('scoring');
+        } else {
+          gameManager.startNewRound();
+          setCurrentPhase('bidding');
+        }
+        setGameManager(gameManager);
+      }, 1000);
     } else {
-      alert('Invalid declaration. Please try again.');
-    }
-    setShowDeclarationModal(false);
-  };
-
-  const handleTrumpSelection = (suit: Suit) => {
-    setGameState(selectTrumpSuit(gameState, suit));
-  };
-
-  const handleCardPlay = (card: CardType) => {
-    setGameState(playCard(gameState, gameState.players[gameState.currentPlayerIndex].id, card));
-  };
-
-  const handleNextRound = () => {
-    setGameState(scoreRound(gameState));
-  };
-
-  const renderGamePhase = () => {
-    switch (gameState.gamePhase) {
-      case 'declaring':
-        return (
-          <View>
-            <Text>Current player: {gameState.players[gameState.currentPlayerIndex].name}</Text>
-            <Button title="Declare Sirs" onPress={() => setShowDeclarationModal(true)} />
-            <DeclarationModal
-              visible={showDeclarationModal}
-              onDeclare={handleDeclaration}
-              maxDeclaration={gameState.cardsPerPlayer}
-            />
-          </View>
-        );
-      case 'selectingTrump':
-        return (
-          <View>
-            <Text>Select Trump Suit:</Text>
-            {Object.values(Suit).map(suit => (
-              <Button key={suit} title={suit} onPress={() => handleTrumpSelection(suit)} />
-            ))}
-          </View>
-        );
-      case 'playing':
-        return (
-          <View style={styles.gameContainer}>
-            <GameTable
-              currentTrick={gameState.currentTrick}
-              trumpSuit={gameState.trumpSuit}
-              players={gameState.players}
-              currentPlayerIndex={gameState.currentPlayerIndex}
-            />
-            <PlayerHand
-              cards={gameState.players[gameState.currentPlayerIndex].hand}
-              onCardPress={handleCardPlay}
-            />
-          </View>
-        );
-      case 'scoring':
-        return (
-          <View>
-            <Text>Round Over! Scores:</Text>
-            {gameState.players.map(player => (
-              <Text key={player.id}>{player.name}: {player.score}</Text>
-            ))}
-            <Button title="Next Round" onPress={handleNextRound} />
-          </View>
-        );
-      case 'gameOver':
-        return (
-          <View>
-            <Text>Game Over! Final Scores:</Text>
-            {gameState.players.map(player => (
-              <Text key={player.id}>{player.name}: {player.score}</Text>
-            ))}
-            <Button title="New Game" onPress={() => setGameState(initializeGame(PLAYER_NAMES))} />
-          </View>
-        );
-      default:
-        return null;
+      setGameManager(gameManager);
     }
   };
+
+  if (!gameManager) {
+    return <Text>Loading...</Text>;
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Kingsir Game</Text>
-      {renderGamePhase()}
+      <Scoreboard players={gameManager.players} />
+      {currentPhase === 'playing' && <PlayedCards cards={gameManager.playedCards} />}
+      <PlayerHand
+        player={gameManager.players[gameManager.currentPlayerIndex]}
+        onCardSelect={currentPhase === 'playing' ? setSelectedCard : () => {}}
+        selectedCard={selectedCard}
+      />
+      {currentPhase === 'bidding' && (
+        <TouchableOpacity style={styles.button} onPress={() => handleBid(gameManager.currentPlayerIndex)}>
+          <Text style={styles.buttonText}>Declare Sirs</Text>
+        </TouchableOpacity>
+      )}
+      {currentPhase === 'playing' && selectedCard && (
+        <TouchableOpacity style={styles.button} onPress={() => handleCardPlay(selectedCard)}>
+          <Text style={styles.buttonText}>Play Card</Text>
+        </TouchableOpacity>
+      )}
+      {currentPhase === 'scoring' && (
+        <View>
+          <Text style={styles.gameOverText}>Game Over!</Text>
+          <Text style={styles.winnerText}>
+            Winner: {gameManager.players.reduce((prev, current) => (current.score > prev.score ? current : prev)).name}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -128,14 +130,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  title: {
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  gameOverText: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  gameContainer: {
-    flex: 1,
-    width: '100%',
+  winnerText: {
+    fontSize: 18,
   },
 });
 

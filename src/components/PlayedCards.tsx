@@ -1,27 +1,30 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Player } from '../models/Player';
 import { Card } from '../models/Card';
 import { CardView } from './CardView';
 
-interface PlayerHandProps {
-  player: Player;
-  onCardSelect: (card: Card) => void;
-  selectedCard: Card | null;
+interface PlayedCardsProps {
+  cards: Card[];
 }
 
-export const PlayerHand: React.FC<PlayerHandProps> = ({ player, onCardSelect, selectedCard }) => {
+export const PlayedCards: React.FC<PlayedCardsProps> = ({ cards }) => {
   return (
     <View style={styles.container}>
-      {player.hand.map((card, index) => (
+      {cards.map((card, index) => (
         <CardView
           key={`${card.suit}-${card.rank}`}
           card={card}
-          onPress={() => onCardSelect(card)}
-          selected={selectedCard === card}
+          onPress={() => {}}
+          selected={false}
           style={[
             styles.card,
-            { transform: [{ rotate: `${(index - player.hand.length / 2 + 0.5) * 5}deg` }] },
+            {
+              transform: [
+                { translateX: (index - cards.length / 2 + 0.5) * 30 },
+                { translateY: Math.random() * 20 - 10 },
+                { rotate: `${Math.random() * 20 - 10}deg` },
+              ],
+            },
           ]}
         />
       ))}
@@ -33,13 +36,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     height: 150,
     marginBottom: 20,
   },
   card: {
     position: 'absolute',
-    bottom: 0,
   },
 });
 
