@@ -22,6 +22,8 @@ export enum Suit {
   }
   
   export class Card {
+    static readonly rank = Rank;
+
     constructor(public suit: Suit, public rank: Rank) {}
   
     toString(): string {

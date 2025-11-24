@@ -30,5 +30,9 @@ export class Deck {
     }
     return hands;
   }
+
+  getRemainingCards(): number {
+    return this.cards.length;
+  }
 }
 

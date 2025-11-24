@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card } from '../models/Card';
-import { CardView } from './CardView';
+import { CardView } from '../components/CardView';
 
 interface PlayedCardsProps {
   cards: Card[];

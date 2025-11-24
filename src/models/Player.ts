@@ -8,7 +8,7 @@ export class Player {
 
   constructor(public name: string) {
     this.hand = [];
-    this.declaredSirs = 0;
+    this.declaredSirs = -1; // -1 means not yet declared
     this.wonSirs = 0;
     this.score = 0;
   }
@@ -31,7 +31,7 @@ export class Player {
 
   resetForNewRound(): void {
     this.hand = [];
-    this.declaredSirs = 0;
+    this.declaredSirs = -1;
     this.wonSirs = 0;
   }
 }
