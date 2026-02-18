@@ -21,10 +21,12 @@ export function PlayArea() {
             {gameState.phase === 'bidding' && (
                 <div className="bidding-panel">
                     <div className="bidding-title">
-                        {isMyTurn ? 'Declare Your Sirs' : `${gameState.players[gameState.currentPlayerIndex]?.name} is bidding...`}
+                        {isMyTurn ? 'How many sirs will you win?' : `${gameState.players[gameState.currentPlayerIndex]?.name} is bidding...`}
                     </div>
                     <div className="bidding-subtitle">
-                        Round {gameState.currentRound} · {gameState.cardsPerPlayer} cards
+                        {isMyTurn
+                            ? `Look at your ${gameState.cardsPerPlayer} cards and pick a number`
+                            : `Round ${gameState.currentRound} · ${gameState.cardsPerPlayer} cards`}
                     </div>
 
                     {/* Existing bids */}
@@ -74,8 +76,8 @@ export function PlayArea() {
                         return (
                             <div className="phase-hint">
                                 {isLast
-                                    ? `You're last. You can't bid ${forbidden >= 0 ? forbidden : '?'} since bids can't total ${gameState.cardsPerPlayer}`
-                                    : 'Predict how many tricks you will win. Hit it exactly to score'}
+                                    ? `You're last. Bidding ${forbidden >= 0 ? forbidden : '?'} is not allowed since bids can't add up to ${gameState.cardsPerPlayer}`
+                                    : 'Pick how many rounds you think you will win. Hit that number exactly to score points'}
                             </div>
                         );
                     })()}

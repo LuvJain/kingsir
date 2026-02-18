@@ -543,97 +543,57 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* ─── Card ─── */
-.card {
-  width: 80px;
-  height: 112px;
-  border-radius: 8px;
-  background: var(--card-bg);
-  box-shadow: var(--card-shadow);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+/* ─── Card (CardMeister web component wrapper) ─── */
+.playing-card-wrap {
+  display: inline-block;
   position: relative;
-  cursor: pointer;
-  user-select: none;
-  transition: box-shadow var(--transition-fast);
-  font-family: 'Inter', sans-serif;
-  overflow: hidden;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 2px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+  /* Responsive card size — scales with viewport, never too small on mobile */
+  width: clamp(68px, 18vw, 96px);
+  height: clamp(95px, 25vw, 134px);
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-.card-rank {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1;
+/* CardMeister renders an <img> inside the custom element */
+.playing-card-wrap playing-card {
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
 }
 
-.card-suit {
-  font-size: 28px;
-  line-height: 1;
-  margin-top: 2px;
+.playing-card-wrap playing-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  object-fit: contain;
+  transition: box-shadow 0.2s ease;
 }
 
-.card-corner {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1;
+/* Played / table card size */
+.playing-card-large {
+  width: clamp(58px, 13vw, 88px);
+  height: clamp(81px, 18.2vw, 123px);
 }
 
-.card-corner-top {
-  top: 5px;
-  left: 6px;
+/* Winner glow */
+.playing-card-winner playing-card img {
+  box-shadow: 0 0 0 3px var(--gold), 0 4px 20px rgba(240,192,64,0.5);
 }
 
-.card-corner-bottom {
-  bottom: 5px;
-  right: 6px;
-  transform: rotate(180deg);
+/* Dimmed when card is not playable */
+.playing-card-disabled {
+  filter: brightness(0.5);
 }
 
-.card-corner-rank {
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.card-corner-suit {
-  font-size: 10px;
-}
-
-.card-red {
-  color: var(--card-red);
-}
-
-.card-black {
-  color: var(--card-black);
-}
-
-.card-large {
-  width: clamp(60px, 14vw, 90px);
-  height: clamp(84px, 20vw, 126px);
-}
-
-.card-large .card-rank {
-  font-size: clamp(14px, 3.5vw, 24px);
-}
-
-.card-large .card-suit {
-  font-size: clamp(20px, 5vw, 34px);
-}
-
-.card-winner {
-  box-shadow: 0 0 0 3px var(--gold), var(--card-shadow-hover);
+/* Glow on hover for playable hand cards */
+.hand-card-playable:hover .playing-card-wrap playing-card img {
+  box-shadow: 0 8px 32px rgba(240, 192, 64, 0.35), 0 4px 12px rgba(0,0,0,0.4);
 }
 
 /* ─── Player Hand ─── */
@@ -663,12 +623,17 @@ body {
 }
 
 .hand-card-wrapper {
-  cursor: pointer;
   flex-shrink: 0;
+  will-change: transform, opacity;
+  transform: translateZ(0); /* force GPU layer */
 }
 
-.hand-card-wrapper:hover {
-  z-index: 10 !important;
+.hand-card-playable {
+  cursor: pointer;
+}
+
+.hand-card-playable:hover {
+  z-index: 50 !important;
 }
 
 /* ─── Status / Turn ─── */

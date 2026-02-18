@@ -4,6 +4,15 @@ export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
 /**
  * AI player logic for bidding, trump selection, and card play.
+ *
+ * Bidding happens before trump is known, so we estimate hand strength
+ * probabilistically. Core heuristics:
+ *   - Aces always win (1.0 expected trick each)
+ *   - Kings win most of the time, less so in short suits (0.7)
+ *   - Queens win occasionally (~0.4), less reliable
+ *   - Short suits (1-2 cards) give ruffing potential worth ~0.5 tricks
+ *   - Void suits worth ~1.0 (guaranteed ruff opportunity)
+ *   - Long suits (5+) have extra winners from suit establishment
  */
 export function aiBid(
     hand: Card[],
@@ -12,38 +21,67 @@ export function aiBid(
     isLastBidder: boolean,
     difficulty: AIDifficulty
 ): number {
-    // Count strong cards (high cards, potential trumps)
-    const highCards = hand.filter(c =>
-        RANK_ORDER.indexOf(c.rank) >= RANK_ORDER.indexOf(Rank.Queen)
-    ).length;
+    const suitCounts = countSuits(hand);
 
-    let estimatedWins: number;
+    // Base expected wins from high cards
+    let base = 0;
+    for (const card of hand) {
+        const rankIdx = RANK_ORDER.indexOf(card.rank);
+        const suitLength = suitCounts[card.suit];
 
+        if (card.rank === Rank.Ace) {
+            base += 1.0; // always wins
+        } else if (card.rank === Rank.King) {
+            // King wins unless someone has the Ace of same suit — less likely in short suits
+            base += suitLength <= 2 ? 0.5 : 0.75;
+        } else if (card.rank === Rank.Queen) {
+            base += suitLength <= 2 ? 0.25 : 0.4;
+        } else if (rankIdx >= RANK_ORDER.indexOf(Rank.Jack)) {
+            base += 0.15;
+        }
+    }
+
+    // Ruffing potential: short suits mean you can trump when that suit is led
+    for (const suit of Object.values(Suit)) {
+        const len = suitCounts[suit];
+        if (len === 0) base += 1.0;       // void = strong ruffing
+        else if (len === 1) base += 0.5;  // singleton = decent ruffing
+        else if (len === 2) base += 0.2;  // doubleton = some ruffing
+    }
+
+    // Long suit bonus: 5+ cards in a suit, the low cards become winners eventually
+    for (const suit of Object.values(Suit)) {
+        if (suitCounts[suit] >= 5) base += (suitCounts[suit] - 4) * 0.3;
+    }
+
+    // Apply difficulty — harder bots are more accurate, easier ones noisier
+    let noise: number;
     switch (difficulty) {
         case 'easy':
-            // Random bid, slightly weighted toward the middle
-            estimatedWins = Math.floor(Math.random() * (cardsPerPlayer + 1));
+            // Mostly ignores strategy, adds heavy random noise
+            noise = (Math.random() - 0.5) * cardsPerPlayer * 0.8;
+            base = base * 0.4 + noise; // mostly random with slight hand awareness
             break;
         case 'medium':
-            // Based on high cards
-            estimatedWins = Math.round(highCards * 0.7);
+            // Decent estimate with moderate noise
+            noise = (Math.random() - 0.5) * 2.0;
+            base = base * 0.75 + noise;
             break;
         case 'hard':
-            // Sophisticated: count aces, kings, suit lengths
-            const aces = hand.filter(c => c.rank === Rank.Ace).length;
-            const kings = hand.filter(c => c.rank === Rank.King).length;
-            const suitCounts = countSuits(hand);
-            const longSuitBonus = Object.values(suitCounts).filter(c => c >= 4).length * 0.5;
-            estimatedWins = Math.round(aces + kings * 0.6 + longSuitBonus);
+            // Accurate with tiny noise
+            noise = (Math.random() - 0.5) * 0.8;
+            base = base + noise;
             break;
     }
 
+    let estimatedWins = Math.round(base);
     estimatedWins = Math.max(0, Math.min(cardsPerPlayer, estimatedWins));
 
-    // Last bidder restriction
+    // Last bidder restriction: can't make total bids equal cardsPerPlayer
     if (isLastBidder && totalBidSoFar + estimatedWins === cardsPerPlayer) {
-        estimatedWins = estimatedWins > 0 ? estimatedWins - 1 : estimatedWins + 1;
-        estimatedWins = Math.max(0, Math.min(cardsPerPlayer, estimatedWins));
+        // Adjust by 1 in whichever direction keeps us in range
+        const adjusted = estimatedWins > 0 ? estimatedWins - 1 : estimatedWins + 1;
+        estimatedWins = Math.max(0, Math.min(cardsPerPlayer, adjusted));
     }
 
     return estimatedWins;

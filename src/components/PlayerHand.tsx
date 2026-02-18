@@ -37,15 +37,13 @@ export function PlayerHand() {
         return !hasLeadingSuit;
     };
 
-    // Responsive card size — bigger on mobile per feedback
-    const cardW = containerWidth < 400 ? 64 : containerWidth < 540 ? 72 : containerWidth < 720 ? 80 : 88;
-    const cardH = Math.round(cardW * 1.4);
+    // Card width matches CSS clamp(68px, 18vw, 96px)
+    const cardW = Math.min(96, Math.max(68, containerWidth * 0.18));
 
     // Fan layout: fit all cards within container with padding
     const cardCount = myPlayer.hand.length;
     const maxFanAngle = Math.min(cardCount * 3, 30);
-    const availableWidth = containerWidth - 32; // 16px padding each side
-    // overlap so all cards fit: totalWidth = cardW + (n-1)*(cardW - overlap)
+    const availableWidth = containerWidth - 32;
     const minOverlap = cardCount > 1
         ? Math.max(0, cardW - (availableWidth - cardW) / (cardCount - 1))
         : 0;
@@ -103,7 +101,7 @@ export function PlayerHand() {
                         return (
                             <motion.div
                                 key={card.id}
-                                className="hand-card-wrapper"
+                                className={`hand-card-wrapper ${canPlay && playable ? 'hand-card-playable' : ''}`}
                                 style={{
                                     zIndex: index,
                                     marginLeft: index === 0 ? 0 : -(overlap),
@@ -122,22 +120,21 @@ export function PlayerHand() {
                                     transition: { duration: 0.3 }
                                 }}
                                 whileHover={canPlay && playable ? {
-                                    y: -20,
+                                    y: -24,
                                     rotate: 0,
-                                    scale: 1.08,
-                                    zIndex: 50,
-                                    transition: { duration: 0.15 }
+                                    scale: 1.12,
+                                    transition: {
+                                        type: 'spring',
+                                        stiffness: 400,
+                                        damping: 15,
+                                        mass: 0.5,
+                                    }
                                 } : undefined}
                             >
                                 <CardView
                                     card={card}
                                     onClick={canPlay && playable ? () => playCard(card) : undefined}
                                     disabled={!canPlay || !playable}
-                                    style={{
-                                        width: cardW,
-                                        height: cardH,
-                                        filter: canPlay && !playable ? 'brightness(0.4)' : 'none',
-                                    }}
                                 />
                             </motion.div>
                         );
