@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../hooks/useGame';
 import { CardView } from './Card';
 import { Suit, SUIT_SYMBOLS, SUIT_COLORS } from '../game/types';
-import { getValidBids } from '../game/gameLogic';
+import { getValidBids, getTotalRounds } from '../game/gameLogic';
 
 export function PlayArea() {
     const {
@@ -17,6 +17,21 @@ export function PlayArea() {
 
     return (
         <div className="play-area">
+            {/* ─── Bids strip during play — visible on mobile where scoreboard may be clipped ─── */}
+            {(gameState.phase === 'playing' || gameState.phase === 'trickResult') && (
+                <div className="bids-strip">
+                    {gameState.players.map(p => {
+                        const isMe = p.id === playerId;
+                        const hit = p.bid >= 0 && p.bid === p.tricksWon;
+                        return (
+                            <span key={p.id} className={`bids-strip-item ${isMe ? 'bids-strip-me' : ''}`}>
+                                {isMe ? 'You' : p.name}: {p.tricksWon}/{p.bid}{hit ? ' ✓' : ''}
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
+
             {/* ─── Bidding Phase ─── */}
             {gameState.phase === 'bidding' && (
                 <div className="bidding-panel">
@@ -133,13 +148,15 @@ export function PlayArea() {
                         {gameState.playedCards.map((pc, index) => {
                             const player = gameState.players.find(p => p.id === pc.playerId);
                             const isWinner = gameState.phase === 'trickResult' && pc.playerId === gameState.trickWinnerId;
+                            const isLeadCard = index === 0;
+                            const isTrumpCard = pc.card.suit === gameState.trumpSuit && !isLeadCard;
                             // Slight random rotation like real cards thrown on table
                             const rotation = (index - 1) * 5 + (Math.sin(index * 2.7) * 3);
 
                             return (
                                 <motion.div
                                     key={`${pc.card.id}-${gameState.trickNumber}`}
-                                    className="played-card-slot"
+                                    className={`played-card-slot ${isLeadCard ? 'played-card-lead' : ''} ${isTrumpCard ? 'played-card-trump' : ''}`}
                                     initial={{ y: 100, opacity: 0, scale: 0.5, rotate: rotation - 20 }}
                                     animate={{
                                         y: 0,
@@ -202,7 +219,7 @@ export function PlayArea() {
                 <div className="phase-hint">
                     {gameState.leadingSuit
                         ? `You must follow ${gameState.leadingSuit} if you have it${gameState.trumpSuit ? `. Trump is ${SUIT_SYMBOLS[gameState.trumpSuit as Suit]} ${gameState.trumpSuit}` : ''}`
-                        : 'You lead this trick, play any card'}
+                        : `You lead this trick, play any card${gameState.trumpSuit ? `. Trump is ${SUIT_SYMBOLS[gameState.trumpSuit as Suit]} ${gameState.trumpSuit}` : ''}`}
                 </div>
             )}
 
@@ -235,85 +252,105 @@ export function PlayArea() {
             )}
 
             {/* ─── Round End ─── */}
-            {gameState.phase === 'roundEnd' && (
-                <motion.div
-                    className="round-end-panel"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                >
-                    <div className="round-end-title">Round {gameState.currentRound} Complete</div>
-                    {gameState.players.map(p => {
-                        const hit = p.bid === p.tricksWon;
-                        const roundScore = hit ? (p.bid === 0 ? 10 : p.bid + 10) : 0;
-                        return (
-                            <div
-                                key={p.id}
-                                className={`round-score-row ${hit ? 'round-score-row-hit' : 'round-score-row-miss'}`}
-                            >
-                                <div>
-                                    <div className="round-score-name">{p.name}</div>
-                                    <div className="round-score-detail">
-                                        Bid {p.bid} · Got {p.tricksWon} {hit ? '✓' : '✗'}
+            {gameState.phase === 'roundEnd' && (() => {
+                const totalRounds = getTotalRounds(gameState.players.length);
+                const isLastRound = gameState.currentRound >= totalRounds;
+                return (
+                    <motion.div
+                        className="round-end-panel"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                    >
+                        <div className="round-end-title">
+                            {isLastRound ? 'Final Round Complete' : `Round ${gameState.currentRound} Complete`}
+                        </div>
+                        {gameState.players.map(p => {
+                            const hit = p.bid === p.tricksWon;
+                            const roundScore = hit ? (p.bid === 0 ? 10 : p.bid + 10) : 0;
+                            return (
+                                <div
+                                    key={p.id}
+                                    className={`round-score-row ${hit ? 'round-score-row-hit' : 'round-score-row-miss'}`}
+                                >
+                                    <div>
+                                        <div className="round-score-name">{p.name}</div>
+                                        <div className="round-score-detail">
+                                            Bid {p.bid} · Got {p.tricksWon} {hit ? '✓' : '✗'}
+                                        </div>
+                                    </div>
+                                    <div className={`round-score-points ${hit ? 'round-score-points-hit' : 'round-score-points-miss'}`}>
+                                        {hit ? `+${roundScore}` : '+0'}
                                     </div>
                                 </div>
-                                <div className={`round-score-points ${hit ? 'round-score-points-hit' : 'round-score-points-miss'}`}>
-                                    {hit ? `+${roundScore}` : '+0'}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {isHost && (
-                        <button
-                            className="primary-btn"
-                            style={{ marginTop: 20 }}
-                            onClick={startNextRound}
-                        >
-                            Next Round →
-                        </button>
-                    )}
-                </motion.div>
-            )}
+                            );
+                        })}
+                        {isHost && (
+                            <button
+                                className="primary-btn"
+                                style={{ marginTop: 20 }}
+                                onClick={startNextRound}
+                            >
+                                {isLastRound ? 'See Final Results' : 'Next Round →'}
+                            </button>
+                        )}
+                    </motion.div>
+                );
+            })()}
 
             {/* ─── Game Over ─── */}
-            {gameState.phase === 'gameOver' && (
-                <motion.div
-                    className="game-over-panel"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                >
+            {gameState.phase === 'gameOver' && (() => {
+                const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+                const winner = sorted[0];
+                return (
                     <motion.div
-                        className="game-over-title"
-                        animate={{ scale: [1, 1.02, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
+                        className="game-over-panel"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
                     >
-                        Game Over!
+                        <motion.div
+                            className="game-over-title"
+                            animate={{ scale: [1, 1.02, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                        >
+                            Game Over
+                        </motion.div>
+                        <div className="game-over-winner">
+                            {winner.id === playerId ? "You win!" : `${winner.name} wins!`}
+                        </div>
+                        <div className="game-over-scores">
+                            {sorted.map((p, i) => (
+                                <div
+                                    key={p.id}
+                                    className={`game-over-score-row ${i === 0 ? 'game-over-score-row-winner' : 'game-over-score-row-other'}`}
+                                >
+                                    <span style={{
+                                        fontWeight: i === 0 ? 800 : 500,
+                                        color: i === 0 ? 'var(--gold)' : 'var(--text-secondary)',
+                                        fontSize: 16,
+                                    }}>
+                                        {i + 1}. {p.id === playerId ? 'You' : p.name}
+                                    </span>
+                                    <span style={{
+                                        fontWeight: 800,
+                                        color: i === 0 ? 'var(--gold)' : 'var(--text-primary)',
+                                        fontSize: 16,
+                                    }}>
+                                        {p.score} pts
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            className="primary-btn"
+                            onClick={() => window.location.reload()}
+                        >
+                            Play Again
+                        </button>
                     </motion.div>
-                    <div className="game-over-winner">
-                        🏆 {(() => {
-                            const winner = gameState.players.reduce((best, p) => p.score > best.score ? p : best);
-                            return winner.id === playerId ? "You win!" : `${winner.name} wins!`;
-                        })()}
-                    </div>
-                    {/* Final scores */}
-                    {gameState.players
-                        .sort((a, b) => b.score - a.score)
-                        .map((p, i) => (
-                            <div key={p.id} style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: '8px 16px',
-                                fontSize: 16,
-                                fontWeight: i === 0 ? 800 : 500,
-                                color: i === 0 ? 'var(--gold)' : 'var(--text-secondary)',
-                            }}>
-                                <span>{i + 1}. {p.name}</span>
-                                <span>{p.score} pts</span>
-                            </div>
-                        ))}
-                </motion.div>
-            )}
+                );
+            })()}
         </div>
     );
 }

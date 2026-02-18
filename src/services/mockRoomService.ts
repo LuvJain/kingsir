@@ -152,7 +152,11 @@ export async function startGame(roomCode: string, hostId: string): Promise<GameS
         connected: true,
     }));
 
-    const gameState = initializeGame(roomCode, hostId, players);
+    // Dev: ?skipToRound=12 to test late-game / ending
+    const skipParam = new URLSearchParams(window.location.search).get('skipToRound');
+    const startRound = skipParam ? Math.max(1, parseInt(skipParam, 10) || 1) : 1;
+
+    const gameState = initializeGame(roomCode, hostId, players, startRound);
     gameStates[roomCode] = gameState;
     rooms[roomCode] = { ...room, status: 'playing' };
 

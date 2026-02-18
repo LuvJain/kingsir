@@ -346,6 +346,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const handleStartNextRound = useCallback(() => {
         if (!gameState || !roomCode) return;
+        if (gameState.phase === 'gameOver') return;
         const newState = logic.startNextRound(gameState);
         const source = isDemo ? mockRoom : room;
         source.updateGameState(roomCode, newState);

@@ -1,11 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { type Card as CardType, Suit } from '../game/types';
-
-// Typed wrapper for the CardMeister web component
-function PlayingCard(props: { suit?: string; rank?: string; cid?: string }) {
-    return React.createElement('playing-card', props as React.HTMLAttributes<HTMLElement>);
-}
+import { type Card as CardType, Suit, type Rank } from '../game/types';
+import * as deck from '@letele/playing-cards';
 
 interface CardProps {
     card: CardType;
@@ -19,20 +15,27 @@ interface CardProps {
     layoutId?: string;
 }
 
-// Map our suit names to CardMeister suit names
-const SUIT_MAP: Record<Suit, string> = {
-    [Suit.Hearts]:   'Hearts',
-    [Suit.Diamonds]: 'Diamonds',
-    [Suit.Clubs]:    'Clubs',
-    [Suit.Spades]:   'Spades',
+// Map our suit names to @letele/playing-cards suit prefix
+const SUIT_PREFIX: Record<Suit, string> = {
+    [Suit.Hearts]:   'H',
+    [Suit.Diamonds]: 'D',
+    [Suit.Clubs]:    'C',
+    [Suit.Spades]:   'S',
 };
 
-// Map our rank names to CardMeister rank values
-const RANK_MAP: Record<string, string> = {
+// Map our rank names to @letele/playing-cards rank suffix
+// Face cards and aces are lowercase in the export names
+const RANK_SUFFIX: Record<string, string> = {
     '2': '2', '3': '3', '4': '4', '5': '5', '6': '6',
     '7': '7', '8': '8', '9': '9', '10': '10',
-    'J': 'Jack', 'Q': 'Queen', 'K': 'King', 'A': 'Ace',
+    'J': 'j', 'Q': 'q', 'K': 'k', 'A': 'a',
 };
+
+// Get the React SVG component for a card
+function getCardComponent(suit: Suit, rank: Rank): React.ComponentType<React.SVGProps<SVGSVGElement>> | null {
+    const key = `${SUIT_PREFIX[suit]}${RANK_SUFFIX[rank]}`;
+    return (deck as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>)[key] || null;
+}
 
 export function CardView({
     card,
@@ -51,19 +54,19 @@ export function CardView({
     const disabledClass = disabled ? 'playing-card-disabled' : '';
 
     if (faceDown) {
+        const BackCard = (deck as any).B1;
         return (
             <motion.div
                 layoutId={layoutId}
                 className={`playing-card-wrap ${sizeClass}`}
                 style={{ cursor: 'default', ...style }}
             >
-                <PlayingCard cid="back" />
+                <BackCard style={{ width: '100%', height: '100%' }} />
             </motion.div>
         );
     }
 
-    const suit = SUIT_MAP[card.suit];
-    const rank = RANK_MAP[card.rank];
+    const CardSvg = getCardComponent(card.suit, card.rank);
 
     return (
         <div
@@ -74,7 +77,23 @@ export function CardView({
                 ...style,
             }}
         >
-            <PlayingCard suit={suit} rank={rank} />
+            {CardSvg ? (
+                <CardSvg style={{ width: '100%', height: '100%', borderRadius: 6 }} />
+            ) : (
+                <div style={{
+                    width: '100%',
+                    height: '100%',
+                    background: '#fff',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    color: '#333',
+                }}>
+                    {card.rank}{card.suit[0]}
+                </div>
+            )}
         </div>
     );
 }

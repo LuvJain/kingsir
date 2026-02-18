@@ -15,17 +15,27 @@ export function findAceOfSpadesHolder(players: PlayerState[]): number {
 
 /**
  * Calculate how many cards each player gets this round.
+ * Round 1 = max cards, decreases by 1 each round down to 1 card.
  */
 export function calculateCardsPerPlayer(round: number, numPlayers: number): number {
     const firstRoundCards = Math.floor(52 / numPlayers);
-    return Math.max(1, firstRoundCards - (round - 1));
+    return firstRoundCards - (round - 1);
 }
 
 /**
- * Initialize a fresh game state for round 1.
+ * Total number of rounds in a game.
+ * Starts at max cards (e.g. 13 for 4 players), counts down to 1.
  */
-export function initializeGame(roomCode: string, hostId: string, players: PlayerState[]): GameState {
-    const cardsPerPlayer = calculateCardsPerPlayer(1, players.length);
+export function getTotalRounds(numPlayers: number): number {
+    return Math.floor(52 / numPlayers);
+}
+
+/**
+ * Initialize a fresh game state.
+ * Accepts an optional startRound for testing (skips ahead).
+ */
+export function initializeGame(roomCode: string, hostId: string, players: PlayerState[], startRound = 1): GameState {
+    const cardsPerPlayer = calculateCardsPerPlayer(startRound, players.length);
     const deck = shuffleDeck(createDeck());
     const hands = dealCards(deck, players.length, cardsPerPlayer);
 
@@ -34,6 +44,8 @@ export function initializeGame(roomCode: string, hostId: string, players: Player
         hand: sortHand(hands[i]),
         bid: -1,
         tricksWon: 0,
+        // Give random scores when skipping ahead for testing
+        score: startRound > 1 ? Math.floor(Math.random() * startRound * 8) : p.score,
     }));
 
     const starterIndex = findAceOfSpadesHolder(updatedPlayers);
@@ -43,7 +55,7 @@ export function initializeGame(roomCode: string, hostId: string, players: Player
         hostId,
         phase: 'bidding',
         players: updatedPlayers,
-        currentRound: 1,
+        currentRound: startRound,
         cardsPerPlayer,
         currentPlayerIndex: starterIndex,
         trumpSuit: null,
@@ -298,12 +310,18 @@ function scoreRound(state: GameState, trickNumber: number): GameState {
  * Start next round or end game.
  */
 export function startNextRound(state: GameState): GameState {
-    const nextRound = state.currentRound + 1;
-    const nextCardsPerPlayer = calculateCardsPerPlayer(nextRound, state.players.length);
+    // Already finished — don't advance
+    if (state.phase === 'gameOver') return state;
 
-    if (nextCardsPerPlayer < 1) {
+    const totalRounds = getTotalRounds(state.players.length);
+
+    // Current round was the last one (1 card round) — game over
+    if (state.currentRound >= totalRounds) {
         return { ...state, phase: 'gameOver' };
     }
+
+    const nextRound = state.currentRound + 1;
+    const nextCardsPerPlayer = calculateCardsPerPlayer(nextRound, state.players.length);
 
     const deck = shuffleDeck(createDeck());
     const hands = dealCards(deck, state.players.length, nextCardsPerPlayer);

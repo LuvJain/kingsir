@@ -1,5 +1,6 @@
 import { useGame } from '../hooks/useGame';
 import { SUIT_SYMBOLS, SUIT_COLORS } from '../game/types';
+import { getTotalRounds } from '../game/gameLogic';
 
 export function Scoreboard() {
     const { gameState, playerId } = useGame();
@@ -21,7 +22,7 @@ export function Scoreboard() {
         <div className="game-top-bar">
             {/* Left: Round + Power Suit */}
             <div className="game-round-info">
-                Round <span>{gameState.currentRound}</span> of 13
+                Round <span>{gameState.currentRound}</span> of {getTotalRounds(gameState.players.length)}
                 {gameState.trumpSuit && (
                     <div className="game-trump-badge">
                         <span
