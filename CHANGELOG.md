@@ -18,7 +18,7 @@
 - `src/services/roomService.ts` — Firebase reads/writes with array normalization and sanitization
 - `src/services/mockRoomService.ts` — in-memory mock for offline demo mode
 - `src/components/Card.tsx` — SVG card component wrapper (`@letele/playing-cards`)
-- `src/components/PlayerHand.tsx` — hand layout with fan, swipeable scroll (mobile), hover animations
+- `src/components/PlayerHand.tsx` — hand layout with fan, riffle + swipe-to-throw touch gestures, hover animations
 - `src/components/PlayArea.tsx` — bidding panel, trump selection, played cards, trick result, bids strip
 - `src/components/Scoreboard.tsx` — top bar with scores, turn order, trump badge, dynamic round count
 - `src/components/LobbyScreen.tsx` — home screen, waiting room, How to Play
@@ -60,18 +60,17 @@
 - GPU compositing: `will-change: transform` and `translateZ(0)` for 60fps
 
 ### Mobile-First Hand (Balatro-style)
-- Swipeable horizontal scroll on mobile (< 600px) with hidden scrollbar
-- Scroll snap for card alignment while swiping
-- Subtle arc lift on center cards for fan feel
-- Reduced rotation on mobile (0.15x vs 0.3x desktop) for readability
-- `whileTap` spring animation on mobile (replaces hover which doesn't exist on touch)
+- All cards always visible with dynamic overlap — no scrolling, fits any screen width
+- Dual touch gesture system with direction detection (8px threshold):
+  - **Horizontal slide = riffle**: slide finger across fan, cards pop up with spring animation as finger passes over, neighbors get subtle lift wave
+  - **Vertical swipe = throw**: drag card upward, it follows finger with elastic feel, release past 50px to play with spring throw animation (y: -220, random rotation)
 - Desktop keeps full hover interaction with spring physics
+- Stale closure prevention: throw offset tracked via ref for accurate release detection
 
 ### Played Cards Visual Feedback
-- Leading card has blue glow border (shows what suit to follow)
-- "(lead)" label appended to first card's player name
-- Trump cards get gold glow border + subtle shake animation
-- Helps players quickly see which suit was led and if anyone trumped
+- Leading card: player name turns blue with "· lead" text suffix
+- Trump cards (when ruffing only, not when following trump lead): player name turns gold with "· trump" suffix + subtle shake animation
+- Text-based indicators instead of box-shadow glows — cleaner at all sizes on mobile
 
 ### AI Bidding (Intelligent)
 - Probability-based hand evaluation before trump is known
@@ -113,8 +112,13 @@
 - `100dvh` for mobile browser chrome handling
 
 ### Your Turn Indicator
-- Larger font (16px, weight 700) for visibility on mobile
-- Subtle pulse animation to draw attention when it's your turn
+- Pulse animation to draw attention when it's your turn
+
+### Chrome Mobile Layout Fix
+- Hand area uses `flex-shrink: 1` so scoreboard at top is never pushed off-screen
+- Removed fixed min-heights that caused dead space below the hand
+- Tightened padding on hand-area, status-bar, and game-top-bar for mobile
+- `safe-area-inset-bottom` on hand-area only (not game-board) to avoid double-padding
 
 ### Game Over Screen
 - Mobile-optimized with card background, max-width container
