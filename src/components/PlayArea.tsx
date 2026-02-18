@@ -17,21 +17,6 @@ export function PlayArea() {
 
     return (
         <div className="play-area">
-            {/* ─── Bids strip during play — visible on mobile where scoreboard may be clipped ─── */}
-            {(gameState.phase === 'playing' || gameState.phase === 'trickResult') && (
-                <div className="bids-strip">
-                    {gameState.players.map(p => {
-                        const isMe = p.id === playerId;
-                        const hit = p.bid >= 0 && p.bid === p.tricksWon;
-                        return (
-                            <span key={p.id} className={`bids-strip-item ${isMe ? 'bids-strip-me' : ''}`}>
-                                {isMe ? 'You' : p.name}: {p.tricksWon}/{p.bid}{hit ? ' ✓' : ''}
-                            </span>
-                        );
-                    })}
-                </div>
-            )}
-
             {/* ─── Bidding Phase ─── */}
             {gameState.phase === 'bidding' && (
                 <div className="bidding-panel">
@@ -44,19 +29,32 @@ export function PlayArea() {
                             : `Round ${gameState.currentRound} · ${gameState.cardsPerPlayer} cards`}
                     </div>
 
-                    {/* Existing bids */}
+                    {/* Existing bids — always visible, animated pop when a bid lands */}
                     <div className="bids-display">
-                        {gameState.players.map((p) => (
-                            <div
-                                key={p.id}
-                                className={`bid-chip ${p.bid >= 0 ? 'bid-chip-done' : 'bid-chip-pending'}`}
-                            >
-                                <span>{p.name}</span>
-                                <span style={{ fontWeight: 800 }}>
-                                    {p.bid >= 0 ? p.bid : '?'}
-                                </span>
-                            </div>
-                        ))}
+                        {gameState.players.map((p) => {
+                            const hasBid = p.bid >= 0;
+                            return (
+                                <motion.div
+                                    key={p.id}
+                                    className={`bid-chip ${hasBid ? 'bid-chip-done' : 'bid-chip-pending'}`}
+                                    animate={hasBid ? {
+                                        scale: [1, 1.15, 1],
+                                        transition: { duration: 0.35, ease: 'backOut' }
+                                    } : {}}
+                                >
+                                    <span className="bid-chip-name">{p.id === playerId ? 'You' : p.name}</span>
+                                    <motion.span
+                                        key={`${p.id}-${p.bid}`}
+                                        className="bid-chip-value"
+                                        initial={hasBid ? { scale: 0, opacity: 0 } : false}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                    >
+                                        {hasBid ? p.bid : '?'}
+                                    </motion.span>
+                                </motion.div>
+                            );
+                        })}
                     </div>
 
                     {/* Bid buttons for current player */}

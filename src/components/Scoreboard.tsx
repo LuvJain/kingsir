@@ -20,19 +20,19 @@ export function Scoreboard() {
 
     return (
         <div className="game-top-bar">
-            {/* Left: Round + Power Suit */}
+            {/* Left: Round + Trump — single compact line */}
             <div className="game-round-info">
-                Round <span>{gameState.currentRound}</span> of {getTotalRounds(gameState.players.length)}
+                <span>R{gameState.currentRound}</span>/{getTotalRounds(gameState.players.length)}
                 {gameState.trumpSuit && (
-                    <div className="game-trump-badge">
+                    <>
+                        <span className="game-round-divider">·</span>
                         <span
-                            className="game-trump-symbol"
+                            className="game-trump-inline"
                             style={{ color: SUIT_COLORS[gameState.trumpSuit] }}
                         >
                             {SUIT_SYMBOLS[gameState.trumpSuit]}
                         </span>
-                        <span>TRUMP</span>
-                    </div>
+                    </>
                 )}
             </div>
 

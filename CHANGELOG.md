@@ -99,17 +99,17 @@
 - Playing (leading): "You lead this trick, play any card. Trump is [symbol] Hearts"
 - Trump suit now always shown in hint, even when leading
 
-### Bids Strip (During Play)
-- Compact bids overlay at top of play area during playing/trickResult phases
-- Shows each player's tricks won vs bid (e.g. "You: 2/3", "Mom: 1/1 ✓")
-- Frosted glass background, always visible on mobile where scoreboard may be clipped
+### Bidding UX
+- Bid chips always visible during bidding phase with animated pop when each bid lands
+- Spring scale animation on the bid value (scale 0 → 1) so you notice each AI bid even if they're fast
+- Chip turns green with larger font when bid is placed vs grey "?" when pending
 
 ### Scoreboard
-- Dynamic "Round X of Y" (calculates from player count, not hardcoded 13)
+- Compact single-line top bar: `R5/13 · ♠` instead of stacked "Round 5 of 13" + separate trump badge
 - Turn order numbers (1st, 2nd, 3rd...) shown during playing phase
 - `position: sticky` with safe-area-inset-top for mobile browsers
-- Score chips with active player highlight and "You" indicator
-- `100dvh` for mobile browser chrome handling
+- Score chips with active player highlight, bid/won tracking, and "You" indicator
+- Removed redundant bids-strip overlay from play area (scoreboard chips already show won/bid)
 
 ### Your Turn Indicator
 - Pulse animation to draw attention when it's your turn
