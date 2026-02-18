@@ -579,16 +579,20 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* Leading card glow — shows what suit to follow */
-.played-card-lead .playing-card-wrap svg {
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.7), 0 0 20px rgba(96, 165, 250, 0.4), 0 2px 8px rgba(0,0,0,0.35);
-}
-
+/* Leading card indicator — text label approach (works at all sizes) */
 .played-card-lead .played-card-name {
-  color: rgba(140, 190, 255, 0.9);
+  color: var(--accent-blue);
 }
 
-/* Trump card shake */
+.played-card-lead .played-card-name::after {
+  content: ' · lead';
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+/* Trump card indicator — gold name + subtle shake */
 @keyframes trump-shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-2px); }
@@ -597,8 +601,16 @@ body {
   80% { transform: translateX(1px); }
 }
 
-.played-card-trump .playing-card-wrap svg {
-  box-shadow: 0 0 0 2px rgba(240, 192, 64, 0.5), 0 0 12px rgba(240, 192, 64, 0.25), 0 2px 8px rgba(0,0,0,0.35);
+.played-card-trump .played-card-name {
+  color: var(--gold);
+}
+
+.played-card-trump .played-card-name::after {
+  content: ' · trump';
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
 }
 
 .played-card-trump .playing-card-wrap {
@@ -675,7 +687,9 @@ body {
   min-height: 110px;
   overflow: visible;
   width: 100%;
-  touch-action: pan-x; /* allow horizontal touch but let framer handle vertical drag */
+  touch-action: none; /* we handle all touch gestures for riffle */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .hand-card-wrapper {
