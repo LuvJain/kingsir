@@ -1,0 +1,290 @@
+import { motion, AnimatePresence } from 'framer-motion';
+import { useGame } from '../hooks/useGame';
+import { CardView } from './Card';
+import { Suit, SUIT_SYMBOLS, SUIT_COLORS } from '../game/types';
+import { getValidBids } from '../game/gameLogic';
+
+export function PlayArea() {
+    const {
+        gameState, myPlayer, myPlayerIndex, playerId,
+        submitBid, selectTrump, acknowledgeResult, startNextRound,
+        isHost,
+    } = useGame();
+
+    if (!gameState || !myPlayer) return null;
+
+    const isMyTurn = gameState.currentPlayerIndex === myPlayerIndex;
+
+    return (
+        <div className="play-area">
+            {/* ─── Bidding Phase ─── */}
+            {gameState.phase === 'bidding' && (
+                <div className="bidding-panel">
+                    <div className="bidding-title">
+                        {isMyTurn ? 'Declare Your Sirs' : `${gameState.players[gameState.currentPlayerIndex]?.name} is bidding...`}
+                    </div>
+                    <div className="bidding-subtitle">
+                        Round {gameState.currentRound} · {gameState.cardsPerPlayer} cards
+                    </div>
+
+                    {/* Existing bids */}
+                    <div className="bids-display">
+                        {gameState.players.map((p) => (
+                            <div
+                                key={p.id}
+                                className={`bid-chip ${p.bid >= 0 ? 'bid-chip-done' : 'bid-chip-pending'}`}
+                            >
+                                <span>{p.name}</span>
+                                <span style={{ fontWeight: 800 }}>
+                                    {p.bid >= 0 ? p.bid : '?'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Bid buttons for current player */}
+                    {isMyTurn && (
+                        <motion.div
+                            className="bid-buttons"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {Array.from({ length: gameState.cardsPerPlayer + 1 }, (_, i) => i).map(bid => {
+                                const validBids = getValidBids(gameState, myPlayerIndex);
+                                const isValid = validBids.includes(bid);
+                                return (
+                                    <button
+                                        key={bid}
+                                        className="bid-btn"
+                                        onClick={() => submitBid(bid)}
+                                        disabled={!isValid}
+                                    >
+                                        {bid}
+                                    </button>
+                                );
+                            })}
+                        </motion.div>
+                    )}
+                </div>
+            )}
+
+            {/* ─── Trump Selection ─── */}
+            {gameState.phase === 'trumpSelection' && (
+                <div className="trump-panel">
+                    <div className="trump-title">
+                        {gameState.highestBidderId === playerId
+                            ? '🏆 Choose Trump Suit'
+                            : `${gameState.players.find(p => p.id === gameState.highestBidderId)?.name} is choosing trump...`}
+                    </div>
+                    {gameState.highestBidderId === playerId && (
+                        <motion.div
+                            className="trump-suits"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {Object.values(Suit).map(suit => (
+                                <motion.button
+                                    key={suit}
+                                    className="trump-suit-btn"
+                                    onClick={() => selectTrump(suit)}
+                                    whileHover={{ y: -6, scale: 1.1 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <span
+                                        className="trump-suit-symbol"
+                                        style={{ color: SUIT_COLORS[suit] }}
+                                    >
+                                        {SUIT_SYMBOLS[suit]}
+                                    </span>
+                                    <span className="trump-suit-label">{suit}</span>
+                                </motion.button>
+                            ))}
+                        </motion.div>
+                    )}
+                </div>
+            )}
+
+            {/* ─── Playing Phase — Played Cards ─── */}
+            {(gameState.phase === 'playing' || gameState.phase === 'trickResult') && (
+                <div className="played-cards-area">
+                    <AnimatePresence>
+                        {gameState.playedCards.map((pc, index) => {
+                            const player = gameState.players.find(p => p.id === pc.playerId);
+                            const isWinner = gameState.phase === 'trickResult' && pc.playerId === gameState.trickWinnerId;
+                            // Slight random rotation like real cards thrown on table
+                            const rotation = (index - 1) * 5 + (Math.sin(index * 2.7) * 3);
+
+                            return (
+                                <motion.div
+                                    key={`${pc.card.id}-${gameState.trickNumber}`}
+                                    className="played-card-slot"
+                                    initial={{ y: 100, opacity: 0, scale: 0.5, rotate: rotation - 20 }}
+                                    animate={{
+                                        y: 0,
+                                        opacity: 1,
+                                        scale: 1,
+                                        rotate: rotation,
+                                        transition: {
+                                            type: 'spring',
+                                            stiffness: 300,
+                                            damping: 20,
+                                            duration: 0.5,
+                                        }
+                                    }}
+                                    exit={{
+                                        y: -50,
+                                        opacity: 0,
+                                        scale: 0.7,
+                                        transition: { duration: 0.3 }
+                                    }}
+                                >
+                                    <CardView
+                                        card={pc.card}
+                                        isWinner={isWinner}
+                                        large
+                                        style={{ transform: `rotate(${rotation}deg)` }}
+                                    />
+                                    <motion.span
+                                        className="played-card-name"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: 0.3 }}
+                                    >
+                                        {player?.name}
+                                    </motion.span>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+
+                    {/* Empty state when no cards played */}
+                    {gameState.playedCards.length === 0 && gameState.phase === 'playing' && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.3 }}
+                            style={{
+                                color: 'rgba(255,255,255,0.3)',
+                                fontSize: 16,
+                                fontWeight: 600,
+                                textAlign: 'center',
+                            }}
+                        >
+                            {isMyTurn ? 'Play a card to start the sir' : 'Waiting for play...'}
+                        </motion.div>
+                    )}
+                </div>
+            )}
+
+            {/* ─── Trick Result: winner text + continue, inline below cards ─── */}
+            {gameState.phase === 'trickResult' && (
+                <motion.div
+                    className="trick-result-row"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, duration: 0.3 }}
+                >
+                    <span className="trick-result-text">
+                        {gameState.trickWinnerId === playerId
+                            ? 'You got the sir!'
+                            : `${gameState.players.find(p => p.id === gameState.trickWinnerId)?.name} takes the sir!`}
+                    </span>
+                    {isHost && (
+                        <motion.button
+                            className="primary-btn"
+                            style={{ padding: '10px 28px', fontSize: 15 }}
+                            onClick={acknowledgeResult}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.7 }}
+                        >
+                            Continue
+                        </motion.button>
+                    )}
+                </motion.div>
+            )}
+
+            {/* ─── Round End ─── */}
+            {gameState.phase === 'roundEnd' && (
+                <motion.div
+                    className="round-end-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                >
+                    <div className="round-end-title">Round {gameState.currentRound} Complete</div>
+                    {gameState.players.map(p => {
+                        const hit = p.bid === p.tricksWon;
+                        const roundScore = hit ? (p.bid === 0 ? 10 : p.bid + 10) : 0;
+                        return (
+                            <div
+                                key={p.id}
+                                className={`round-score-row ${hit ? 'round-score-row-hit' : 'round-score-row-miss'}`}
+                            >
+                                <div>
+                                    <div className="round-score-name">{p.name}</div>
+                                    <div className="round-score-detail">
+                                        Bid {p.bid} · Got {p.tricksWon} {hit ? '✓' : '✗'}
+                                    </div>
+                                </div>
+                                <div className={`round-score-points ${hit ? 'round-score-points-hit' : 'round-score-points-miss'}`}>
+                                    {hit ? `+${roundScore}` : '+0'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {isHost && (
+                        <button
+                            className="primary-btn"
+                            style={{ marginTop: 20 }}
+                            onClick={startNextRound}
+                        >
+                            Next Round →
+                        </button>
+                    )}
+                </motion.div>
+            )}
+
+            {/* ─── Game Over ─── */}
+            {gameState.phase === 'gameOver' && (
+                <motion.div
+                    className="game-over-panel"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <motion.div
+                        className="game-over-title"
+                        animate={{ scale: [1, 1.02, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                    >
+                        Game Over!
+                    </motion.div>
+                    <div className="game-over-winner">
+                        🏆 {(() => {
+                            const winner = gameState.players.reduce((best, p) => p.score > best.score ? p : best);
+                            return winner.id === playerId ? "You win!" : `${winner.name} wins!`;
+                        })()}
+                    </div>
+                    {/* Final scores */}
+                    {gameState.players
+                        .sort((a, b) => b.score - a.score)
+                        .map((p, i) => (
+                            <div key={p.id} style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                padding: '8px 16px',
+                                fontSize: 16,
+                                fontWeight: i === 0 ? 800 : 500,
+                                color: i === 0 ? 'var(--gold)' : 'var(--text-secondary)',
+                            }}>
+                                <span>{i + 1}. {p.name}</span>
+                                <span>{p.score} pts</span>
+                            </div>
+                        ))}
+                </motion.div>
+            )}
+        </div>
+    );
+}
