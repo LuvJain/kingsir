@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { type Card as CardType } from '../game/types';
 import { useGame } from '../hooks/useGame';
 import { CardView } from './Card';
@@ -8,7 +8,8 @@ export function PlayerHand() {
     const { gameState, myPlayer, myPlayerIndex, playCard } = useGame();
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-    const isMobile = containerWidth < 600;
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [playingCardId, setPlayingCardId] = useState<string | null>(null);
 
     useEffect(() => {
         const update = () => {
@@ -31,9 +32,8 @@ export function PlayerHand() {
     // Check which cards are valid to play
     const getIsPlayable = (card: CardType): boolean => {
         if (!canPlay) return false;
-        if (!gameState.leadingSuit) return true; // leading, can play anything
+        if (!gameState.leadingSuit) return true;
         if (card.suit === gameState.leadingSuit) return true;
-        // Can only play off-suit if we don't have leading suit
         const hasLeadingSuit = myPlayer.hand.some(c => c.suit === gameState.leadingSuit);
         return !hasLeadingSuit;
     };
@@ -41,24 +41,25 @@ export function PlayerHand() {
     // Card width matches CSS clamp(68px, 18vw, 96px)
     const cardW = Math.min(96, Math.max(68, containerWidth * 0.18));
 
-    // Fan layout params
+    // Fan layout: always fit all cards within container
     const cardCount = myPlayer.hand.length;
     const maxFanAngle = Math.min(cardCount * 3, 30);
-
-    // On mobile: less overlap so cards are more visible when scrolling
-    // On desktop: fit cards within container
     const availableWidth = containerWidth - 32;
-    let overlap: number;
-    if (isMobile) {
-        // Mobile: moderate overlap, container scrolls
-        overlap = Math.min(cardW * 0.45, 40);
-    } else {
-        // Desktop: fit within container
-        const minOverlap = cardCount > 1
-            ? Math.max(0, cardW - (availableWidth - cardW) / (cardCount - 1))
-            : 0;
-        overlap = Math.min(cardW - 12, Math.max(minOverlap, cardW - 700 / Math.max(cardCount, 1)));
-    }
+    const minOverlap = cardCount > 1
+        ? Math.max(0, cardW - (availableWidth - cardW) / (cardCount - 1))
+        : 0;
+    const overlap = Math.min(cardW - 12, Math.max(minOverlap, cardW - 700 / Math.max(cardCount, 1)));
+
+    // Handle card play with throw animation
+    const handlePlayCard = useCallback((card: CardType) => {
+        if (playingCardId) return;
+        setPlayingCardId(card.id);
+        // Small delay so the throw animation plays before state update
+        setTimeout(() => {
+            playCard(card);
+            setPlayingCardId(null);
+        }, 150);
+    }, [playCard, playingCardId]);
 
     return (
         <div className="hand-area" ref={containerRef}>
@@ -101,40 +102,52 @@ export function PlayerHand() {
             </div>
 
             {/* Cards in hand */}
-            <div className={`hand-cards ${isMobile ? 'hand-cards-scroll' : ''}`}>
+            <div className="hand-cards">
                 <AnimatePresence mode="popLayout">
                     {myPlayer.hand.map((card, index) => {
                         const centerOffset = (cardCount - 1) / 2;
                         const offsetFromCenter = index - centerOffset;
                         const angle = (offsetFromCenter / Math.max(centerOffset, 1)) * maxFanAngle;
                         const playable = getIsPlayable(card);
-                        // Subtle arc lift on mobile
-                        const arcY = isMobile
-                            ? Math.abs(offsetFromCenter) * -2
-                            : 0;
+                        const isBeingPlayed = card.id === playingCardId;
+                        const isActive = activeIndex === index;
 
                         return (
                             <motion.div
                                 key={card.id}
                                 className={`hand-card-wrapper ${canPlay && playable ? 'hand-card-playable' : ''}`}
                                 style={{
-                                    zIndex: index,
+                                    zIndex: isActive ? 100 : index,
                                     marginLeft: index === 0 ? 0 : -(overlap),
                                 }}
                                 initial={{ y: 80, opacity: 0, rotate: 0 }}
-                                animate={{
-                                    y: arcY,
+                                animate={isBeingPlayed ? {
+                                    y: -200,
+                                    x: 0,
+                                    opacity: 0,
+                                    scale: 0.6,
+                                    rotate: (Math.random() - 0.5) * 30,
+                                    transition: {
+                                        type: 'spring',
+                                        stiffness: 200,
+                                        damping: 15,
+                                        mass: 0.8,
+                                    }
+                                } : {
+                                    y: 0,
+                                    x: 0,
                                     opacity: playable || !canPlay ? 1 : 0.45,
-                                    rotate: isMobile ? angle * 0.15 : angle * 0.3,
+                                    rotate: angle * 0.3,
+                                    scale: 1,
                                     transition: { delay: index * 0.04, duration: 0.4, ease: 'backOut' }
                                 }}
                                 exit={{
                                     y: -120,
                                     opacity: 0,
                                     scale: 0.8,
-                                    transition: { duration: 0.3 }
+                                    transition: { duration: 0.25 }
                                 }}
-                                whileHover={canPlay && playable ? {
+                                whileHover={canPlay && playable && !isBeingPlayed ? {
                                     y: -24,
                                     rotate: 0,
                                     scale: 1.12,
@@ -145,19 +158,27 @@ export function PlayerHand() {
                                         mass: 0.5,
                                     }
                                 } : undefined}
-                                whileTap={canPlay && playable && isMobile ? {
-                                    y: -20,
-                                    scale: 1.08,
-                                    transition: {
-                                        type: 'spring',
-                                        stiffness: 400,
-                                        damping: 15,
+                                // Mobile: drag up to throw card
+                                drag={canPlay && playable && !isBeingPlayed ? 'y' : false}
+                                dragConstraints={{ top: -60, bottom: 0 }}
+                                dragElastic={0.6}
+                                dragSnapToOrigin
+                                onDragStart={() => setActiveIndex(index)}
+                                onDragEnd={(_e, info) => {
+                                    setActiveIndex(null);
+                                    // If dragged up past threshold, play the card
+                                    if (info.offset.y < -40 && canPlay && playable) {
+                                        handlePlayCard(card);
                                     }
-                                } : undefined}
+                                }}
+                                onTouchStart={() => {
+                                    if (canPlay && playable) setActiveIndex(index);
+                                }}
+                                onTouchEnd={() => setActiveIndex(null)}
                             >
                                 <CardView
                                     card={card}
-                                    onClick={canPlay && playable ? () => playCard(card) : undefined}
+                                    onClick={canPlay && playable && !isBeingPlayed ? () => handlePlayCard(card) : undefined}
                                     disabled={!canPlay || !playable}
                                 />
                             </motion.div>

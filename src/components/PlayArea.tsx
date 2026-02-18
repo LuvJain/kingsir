@@ -149,7 +149,12 @@ export function PlayArea() {
                             const player = gameState.players.find(p => p.id === pc.playerId);
                             const isWinner = gameState.phase === 'trickResult' && pc.playerId === gameState.trickWinnerId;
                             const isLeadCard = index === 0;
-                            const isTrumpCard = pc.card.suit === gameState.trumpSuit && !isLeadCard;
+                            // Trump indicator only when someone plays trump on a non-trump lead
+                            // (i.e. they're ruffing). If trump IS the leading suit, following trump is normal.
+                            const leadingSuit = gameState.playedCards[0]?.card.suit;
+                            const isTrumpCard = !isLeadCard
+                                && pc.card.suit === gameState.trumpSuit
+                                && leadingSuit !== gameState.trumpSuit;
                             // Slight random rotation like real cards thrown on table
                             const rotation = (index - 1) * 5 + (Math.sin(index * 2.7) * 3);
 
@@ -157,7 +162,7 @@ export function PlayArea() {
                                 <motion.div
                                     key={`${pc.card.id}-${gameState.trickNumber}`}
                                     className={`played-card-slot ${isLeadCard ? 'played-card-lead' : ''} ${isTrumpCard ? 'played-card-trump' : ''}`}
-                                    initial={{ y: 100, opacity: 0, scale: 0.5, rotate: rotation - 20 }}
+                                    initial={{ y: 180, opacity: 0, scale: 0.4, rotate: rotation - 25 }}
                                     animate={{
                                         y: 0,
                                         opacity: 1,
@@ -165,16 +170,16 @@ export function PlayArea() {
                                         rotate: rotation,
                                         transition: {
                                             type: 'spring',
-                                            stiffness: 300,
-                                            damping: 20,
-                                            duration: 0.5,
+                                            stiffness: 350,
+                                            damping: 18,
+                                            mass: 0.6,
                                         }
                                     }}
                                     exit={{
                                         y: -50,
                                         opacity: 0,
                                         scale: 0.7,
-                                        transition: { duration: 0.3 }
+                                        transition: { duration: 0.25 }
                                     }}
                                 >
                                     <CardView

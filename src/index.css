@@ -581,13 +581,11 @@ body {
 
 /* Leading card glow — shows what suit to follow */
 .played-card-lead .playing-card-wrap svg {
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.6), 0 0 16px rgba(96, 165, 250, 0.3), 0 2px 8px rgba(0,0,0,0.35);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.7), 0 0 20px rgba(96, 165, 250, 0.4), 0 2px 8px rgba(0,0,0,0.35);
 }
 
-.played-card-lead .played-card-name::after {
-  content: ' (lead)';
-  font-size: 10px;
-  opacity: 0.6;
+.played-card-lead .played-card-name {
+  color: rgba(140, 190, 255, 0.9);
 }
 
 /* Trump card shake */
@@ -677,25 +675,7 @@ body {
   min-height: 110px;
   overflow: visible;
   width: 100%;
-}
-
-/* Mobile: horizontally scrollable hand */
-.hand-cards-scroll {
-  justify-content: flex-start;
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-  padding: 8px 16px 4px;
-  scrollbar-width: none; /* Firefox */
-}
-
-.hand-cards-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.hand-cards-scroll .hand-card-wrapper {
-  scroll-snap-align: center;
+  touch-action: pan-x; /* allow horizontal touch but let framer handle vertical drag */
 }
 
 .hand-card-wrapper {
