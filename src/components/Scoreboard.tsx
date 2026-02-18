@@ -6,62 +6,57 @@ export function Scoreboard() {
 
     if (!gameState) return null;
 
+    const n = gameState.players.length;
+    const cur = gameState.currentPlayerIndex;
+
+    // Build turn order: who plays 1st, 2nd, 3rd... from current position
+    const turnOrder: Record<string, number> = {};
+    for (let i = 0; i < n; i++) {
+        turnOrder[gameState.players[(cur + i) % n].id] = i + 1;
+    }
+
+    const showOrder = gameState.phase === 'playing';
+
     return (
         <div className="game-top-bar">
-            {/* Left: Round Info */}
+            {/* Left: Round + Power Suit */}
             <div className="game-round-info">
                 Round <span>{gameState.currentRound}</span> of 13
                 {gameState.trumpSuit && (
-                    <div className="game-trump-badge" style={{
-                        marginLeft: 16,
-                        padding: '4px 12px',
-                        background: 'rgba(255,255,255,0.1)',
-                        borderRadius: 12,
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                    }}>
+                    <div className="game-trump-badge">
                         <span
                             className="game-trump-symbol"
-                            style={{
-                                color: SUIT_COLORS[gameState.trumpSuit],
-                                fontSize: 20,
-                                marginRight: 6,
-                                textShadow: '0 0 10px rgba(0,0,0,0.5)'
-                            }}
+                            style={{ color: SUIT_COLORS[gameState.trumpSuit] }}
                         >
                             {SUIT_SYMBOLS[gameState.trumpSuit]}
                         </span>
-                        <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.5 }}>
-                            {gameState.trumpSuit.toUpperCase()}
-                        </span>
+                        <span>TRUMP</span>
                     </div>
                 )}
             </div>
 
-            {/* Center: Scores & Bids */}
+            {/* Center: Scores, bids, turn order */}
             <div className="scoreboard">
                 {gameState.players.map(p => {
                     const isMe = p.id === playerId;
-                    const isTurn = gameState.currentPlayerIndex >= 0 &&
-                        gameState.players[gameState.currentPlayerIndex]?.id === p.id;
+                    const isTurn = gameState.players[cur]?.id === p.id;
                     const bid = p.bid >= 0 ? p.bid : '-';
                     const won = p.tricksWon;
                     const hit = p.bid >= 0 && p.bid === p.tricksWon;
+                    const order = turnOrder[p.id];
 
                     return (
                         <div
                             key={p.id}
-                            className={`score-item ${isTurn ? 'score-item-active' : ''}`}
-                            style={{
-                                border: isMe ? '1px solid rgba(255, 255, 255, 0.15)' : undefined,
-                                background: isMe ? 'rgba(255, 255, 255, 0.08)' : undefined
-                            }}
+                            className={`score-item ${isTurn ? 'score-item-active' : ''} ${isMe ? 'score-item-me' : ''}`}
                         >
+                            {showOrder && (
+                                <span className="score-order">{order}</span>
+                            )}
                             <span className="score-name">{isMe ? 'You' : p.name}</span>
                             <span className="score-value">{p.score}</span>
                             <span className="score-bid-info">
-                                ({won}/{bid})
-                                {p.bid >= 0 && hit && <span style={{ color: 'var(--accent-green)', marginLeft: 2 }}>✓</span>}
+                                ({won}/{bid}){p.bid >= 0 && hit && <span className="score-hit">✓</span>}
                             </span>
                         </div>
                     );
@@ -70,7 +65,7 @@ export function Scoreboard() {
 
             {/* Right: Room Code (Desktop only) */}
             <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Code: {gameState.roomCode}
+                {gameState.roomCode}
             </div>
         </div>
     );

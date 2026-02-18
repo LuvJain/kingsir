@@ -73,14 +73,61 @@ body {
 }
 
 /* ─── Lobby ─── */
+@keyframes floatUp {
+  0%   { transform: translateY(0)   rotate(0deg);   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-110vh) rotate(20deg); opacity: 0; }
+}
+
 .lobby {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--bg-primary);
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lobby-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.lobby-bg-suit {
+  position: absolute;
+  bottom: -10%;
+  font-size: 32px;
+  animation: floatUp linear infinite;
+  will-change: transform, opacity;
+  user-select: none;
+}
+
+/* Each suit particle: different x, size, speed, delay */
+.lobby-bg-suit:nth-child(1)  { left: 5%;  font-size: 24px; animation-duration: 12s; animation-delay: 0s;    color: rgba(200,60,60,0.15); }
+.lobby-bg-suit:nth-child(2)  { left: 15%; font-size: 40px; animation-duration: 18s; animation-delay: 2s;    color: rgba(255,255,255,0.07); }
+.lobby-bg-suit:nth-child(3)  { left: 28%; font-size: 20px; animation-duration: 14s; animation-delay: 5s;    color: rgba(200,60,60,0.12); }
+.lobby-bg-suit:nth-child(4)  { left: 40%; font-size: 36px; animation-duration: 20s; animation-delay: 1s;    color: rgba(255,255,255,0.06); }
+.lobby-bg-suit:nth-child(5)  { left: 55%; font-size: 28px; animation-duration: 15s; animation-delay: 7s;    color: rgba(200,60,60,0.1);  }
+.lobby-bg-suit:nth-child(6)  { left: 67%; font-size: 44px; animation-duration: 22s; animation-delay: 3s;    color: rgba(255,255,255,0.05); }
+.lobby-bg-suit:nth-child(7)  { left: 78%; font-size: 22px; animation-duration: 13s; animation-delay: 9s;    color: rgba(200,60,60,0.13); }
+.lobby-bg-suit:nth-child(8)  { left: 88%; font-size: 32px; animation-duration: 17s; animation-delay: 4s;    color: rgba(255,255,255,0.07); }
+.lobby-bg-suit:nth-child(9)  { left: 22%; font-size: 18px; animation-duration: 11s; animation-delay: 11s;   color: rgba(200,60,60,0.09); }
+.lobby-bg-suit:nth-child(10) { left: 72%; font-size: 38px; animation-duration: 19s; animation-delay: 6s;    color: rgba(255,255,255,0.06); }
+.lobby-bg-suit:nth-child(11) { left: 48%; font-size: 26px; animation-duration: 16s; animation-delay: 13s;   color: rgba(200,60,60,0.11); }
+.lobby-bg-suit:nth-child(12) { left: 92%; font-size: 20px; animation-duration: 10s; animation-delay: 8s;    color: rgba(255,255,255,0.08); }
+
+/* Keep lobby content above background */
+.lobby > *:not(.lobby-bg) {
+  position: relative;
+  z-index: 1;
 }
 
 .lobby-title {
@@ -400,6 +447,7 @@ body {
 /* ─── Game Board ─── */
 .game-board {
   height: 100vh;
+  height: 100dvh; /* dynamic viewport — accounts for mobile browser chrome */
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
@@ -408,6 +456,7 @@ body {
 }
 
 .game-top-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -571,8 +620,8 @@ body {
 }
 
 .card-large {
-  width: clamp(52px, 13vw, 90px);
-  height: clamp(73px, 18vw, 126px);
+  width: clamp(60px, 14vw, 90px);
+  height: clamp(84px, 20vw, 126px);
 }
 
 .card-large .card-rank {
@@ -798,8 +847,8 @@ body {
 .score-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
@@ -811,9 +860,37 @@ body {
   border: 1px solid rgba(240, 192, 64, 0.2);
 }
 
+.score-item-me {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.score-item-active.score-item-me {
+  border: 1px solid rgba(240, 192, 64, 0.4);
+}
+
+.score-order {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.score-item-active .score-order {
+  background: rgba(240, 192, 64, 0.2);
+  color: var(--gold);
+}
+
 .score-name {
   color: var(--text-secondary);
-  max-width: 80px;
+  max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -827,6 +904,11 @@ body {
 .score-bid-info {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.score-hit {
+  color: var(--accent-green);
+  margin-left: 2px;
 }
 
 /* ─── Trick Result Row ─── */

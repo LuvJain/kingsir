@@ -4,24 +4,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const HOW_TO_PLAY = [
     {
-        heading: 'The goal',
-        text: 'Win exactly as many tricks (sirs) as you bid. Bid too high or too low and you score nothing.',
+        heading: 'What is a sir?',
+        text: 'Each round, everyone plays one card at a time. Whoever plays the highest card wins that round. That is called taking a sir.',
     },
     {
-        heading: 'Bidding',
-        text: 'Look at your hand and predict how many tricks you will win. The highest bidder picks trump. One catch: the total bids cannot equal the number of tricks, so someone always has to be wrong.',
+        heading: 'So what is bidding?',
+        text: 'Before you play, look at your hand and guess how many sirs you think you will win. That is your bid. The trick is you have to hit that number exactly. Win too many or too few and you score nothing.',
     },
     {
-        heading: 'Playing a trick',
-        text: 'The player with the Ace of Spades leads first. You must follow the leading suit if you have it. If you do not, play any card. Trump cards beat all other suits, but only the highest trump wins.',
+        heading: 'What is trump?',
+        text: 'Whoever bids the highest gets to pick a suit as trump. Any card in that suit beats every other card. Even a 2 of trump beats a King of anything else. Think of it like a wildcard suit.',
+    },
+    {
+        heading: 'How does playing work?',
+        text: 'The person with the Ace of Spades goes first. You have to follow the suit that was led if you have it. If you do not have it, you can play anything, including a trump card to steal the sir.',
     },
     {
         heading: 'Scoring',
-        text: 'Hit your bid exactly and you score your bid plus 10 points. Miss it and you score nothing. Bidding zero is the hardest, you score 10 only if you take no tricks at all.',
-    },
-    {
-        heading: 'Rounds',
-        text: '13 rounds total. Each round deals one more card than the last. The player with the most points after round 13 wins.',
+        text: 'Hit your bid exactly and you get your bid plus 10 points. Miss it and you get nothing. Bidding zero is the hardest. You only score if you take zero sirs the whole round.',
     },
 ];
 
@@ -92,6 +92,8 @@ export function LobbyScreen() {
     const canStart = players.length >= 3;
 
     // Waiting Room View
+    const suits = ['♠','♥','♦','♣','♠','♥','♦','♣','♠','♥','♦','♣'];
+
     if (roomData) {
         return (
             <motion.div
@@ -100,6 +102,9 @@ export function LobbyScreen() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
             >
+                <div className="lobby-bg">
+                    {suits.map((s, i) => <span key={i} className="lobby-bg-suit">{s}</span>)}
+                </div>
                 <div className="lobby-card">
                     <div className="room-code">
                         <div className="room-code-label">Room Code</div>
@@ -141,18 +146,19 @@ export function LobbyScreen() {
                     )}
 
                     {isHost ? (
-                        <button
-                            className="primary-btn"
-                            onClick={startGame}
-                            disabled={!canStart}
-                            style={{
-                                marginTop: 20,
-                                opacity: canStart ? 1 : 0.5,
-                                background: canStart ? 'linear-gradient(135deg, var(--gold-dim), var(--gold))' : 'var(--bg-elevated)'
-                            }}
-                        >
-                            {canStart ? 'Start Game' : 'Waiting for 3+ players...'}
-                        </button>
+                        canStart ? (
+                            <button
+                                className="primary-btn"
+                                onClick={startGame}
+                                style={{ marginTop: 20 }}
+                            >
+                                Start Game
+                            </button>
+                        ) : (
+                            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: 24, fontSize: 14 }}>
+                                Need at least 3 players to start
+                            </div>
+                        )
                     ) : (
                         <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: 24, fontStyle: 'italic' }}>
                             Waiting for host to start...
@@ -177,6 +183,9 @@ export function LobbyScreen() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
         >
+            <div className="lobby-bg">
+                {suits.map((s, i) => <span key={i} className="lobby-bg-suit">{s}</span>)}
+            </div>
             <div className="lobby-title">Kingsir</div>
             <div className="lobby-subtitle">Bid your sirs. Hit your number. Beat everyone else.</div>
             <HowToPlay />

@@ -37,8 +37,8 @@ export function PlayerHand() {
         return !hasLeadingSuit;
     };
 
-    // Responsive card size
-    const cardW = containerWidth < 480 ? 52 : containerWidth < 640 ? 64 : 80;
+    // Responsive card size — bigger on mobile per feedback
+    const cardW = containerWidth < 400 ? 64 : containerWidth < 540 ? 72 : containerWidth < 720 ? 80 : 88;
     const cardH = Math.round(cardW * 1.4);
 
     // Fan layout: fit all cards within container with padding
@@ -75,7 +75,7 @@ export function PlayerHand() {
                 )}
                 {gameState.phase === 'trumpSelection' && (
                     gameState.highestBidderId === myPlayer.id ? (
-                        <span className="your-turn">🏆 You won the bid! Pick trump</span>
+                        <span className="your-turn">🏆 You won the bid! Choose trump</span>
                     ) : (
                         <span className="waiting">
                             {gameState.players.find(p => p.id === gameState.highestBidderId)?.name} is choosing trump...
