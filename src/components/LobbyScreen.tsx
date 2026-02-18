@@ -2,6 +2,60 @@ import { useState } from 'react';
 import { useGame } from '../hooks/useGame';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const HOW_TO_PLAY = [
+    {
+        heading: 'The goal',
+        text: 'Win exactly as many tricks (sirs) as you bid. Bid too high or too low and you score nothing.',
+    },
+    {
+        heading: 'Bidding',
+        text: 'Look at your hand and predict how many tricks you will win. The highest bidder picks trump. One catch: the total bids cannot equal the number of tricks, so someone always has to be wrong.',
+    },
+    {
+        heading: 'Playing a trick',
+        text: 'The player with the Ace of Spades leads first. You must follow the leading suit if you have it. If you do not, play any card. Trump cards beat all other suits, but only the highest trump wins.',
+    },
+    {
+        heading: 'Scoring',
+        text: 'Hit your bid exactly and you score your bid plus 10 points. Miss it and you score nothing. Bidding zero is the hardest, you score 10 only if you take no tricks at all.',
+    },
+    {
+        heading: 'Rounds',
+        text: '13 rounds total. Each round deals one more card than the last. The player with the most points after round 13 wins.',
+    },
+];
+
+function HowToPlay() {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="how-to-play">
+            <button className="how-to-play-toggle" onClick={() => setOpen(o => !o)}>
+                <span>How to Play</span>
+                <span className="how-to-play-chevron" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        className="how-to-play-body"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        style={{ overflow: 'hidden' }}
+                    >
+                        {HOW_TO_PLAY.map(({ heading, text }) => (
+                            <div key={heading} className="how-to-play-item">
+                                <div className="how-to-play-heading">{heading}</div>
+                                <div className="how-to-play-text">{text}</div>
+                            </div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 export function LobbyScreen() {
     const {
         createRoom, joinRoom, addAI, removeAIPlayer, startGame, leaveRoom, roomData, playerId, error, startDemo
@@ -105,6 +159,8 @@ export function LobbyScreen() {
                         </div>
                     )}
 
+                    <HowToPlay />
+
                     <button className="secondary-btn" onClick={leaveRoom} style={{ marginTop: 12 }}>
                         Leave Room
                     </button>
@@ -122,7 +178,8 @@ export function LobbyScreen() {
             exit={{ opacity: 0 }}
         >
             <div className="lobby-title">Kingsir</div>
-            <div className="lobby-subtitle">Real-time Multiplayer Card Game</div>
+            <div className="lobby-subtitle">Bid your sirs. Hit your number. Beat everyone else.</div>
+            <HowToPlay />
 
             <AnimatePresence mode="wait">
                 {mode === 'menu' ? (

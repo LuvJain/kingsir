@@ -163,7 +163,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 newState = logic.playCard(state, aiIdx, card);
             }
 
-            // Sync update
+            // Guard: if another client already advanced the state, bail out
+            const current = gameStateRef.current;
+            if (
+                current?.phase !== state.phase ||
+                current?.currentPlayerIndex !== state.currentPlayerIndex ||
+                current?.trickNumber !== state.trickNumber
+            ) {
+                aiProcessingRef.current = false;
+                return;
+            }
+
+            // Release the lock BEFORE writing so the effect can re-fire when
+            // Firebase's onValue callback updates gameState
+            aiProcessingRef.current = false;
             await source.updateGameState(code, newState);
 
             // Handle post-trick advance
@@ -179,14 +192,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         } catch (err) {
             console.error('AI Error:', err);
-        } finally {
             aiProcessingRef.current = false;
         }
     }, [isDemo]);
 
-    // AI Turn Logic (Host only)
+    // AI Turn Logic — runs on every human client, not just host.
+    // processAITurn checks the state hasn't changed before writing (optimistic guard).
     useEffect(() => {
-        if (!isHost || !gameState || !roomCode || aiProcessingRef.current) return;
+        if (!gameState || !roomCode || aiProcessingRef.current) return;
+        // Only human players trigger AI (don't let AI clients trigger other AIs)
+        if (!myPlayer || myPlayer.isAI) return;
 
         const currentPlayer = gameState.players[gameState.currentPlayerIndex];
 
@@ -208,7 +223,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ) {
             processAITurn(roomCode, gameState, currentPlayer.id, currentPlayer.aiDifficulty || 'medium');
         }
-    }, [gameState, isHost, roomCode, processAITurn]);
+    }, [gameState, roomCode, myPlayer, processAITurn]);
 
     // Actions
     const handleCreateRoom = useCallback(async (name: string) => {
@@ -309,20 +324,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const source = isDemo ? mockRoom : room;
         source.updateGameState(roomCode, newState);
 
-        if (newState.phase === 'trickResult' && isHost) {
+        // Auto-advance after trick — any human client can do this;
+        // the optimistic guard in the timeout prevents double-advance
+        if (newState.phase === 'trickResult') {
             setTimeout(async () => {
-                const current = gameStateRef.current; // access fresh state
-                if (current?.phase === 'trickResult') {
+                const current = gameStateRef.current;
+                if (current?.phase === 'trickResult' && current.trickWinnerId) {
                     const nextState = logic.advanceAfterTrick(current);
                     await source.updateGameState(roomCode, nextState);
                 }
-            }, 4000);
+            }, 3000);
         }
-    }, [gameState, roomCode, myPlayerIndex, isDemo, isHost]);
+    }, [gameState, roomCode, myPlayerIndex, isDemo]);
 
     const handleAcknowledgeResult = useCallback(() => {
-        // Only applicable if we had client-side "waiting for click" but we use timer for trick result
-    }, []);
+        if (!gameState || !roomCode || gameState.phase !== 'trickResult') return;
+        const source = isDemo ? mockRoom : room;
+        const nextState = logic.advanceAfterTrick(gameState);
+        source.updateGameState(roomCode, nextState);
+    }, [gameState, roomCode, isDemo]);
 
     const handleStartNextRound = useCallback(() => {
         if (!gameState || !roomCode) return;

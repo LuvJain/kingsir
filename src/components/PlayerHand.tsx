@@ -1,10 +1,25 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
 import { type Card as CardType } from '../game/types';
 import { useGame } from '../hooks/useGame';
 import { CardView } from './Card';
 
 export function PlayerHand() {
     const { gameState, myPlayer, myPlayerIndex, playCard } = useGame();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const update = () => {
+            if (containerRef.current) {
+                setContainerWidth(containerRef.current.offsetWidth);
+            }
+        };
+        update();
+        const ro = new ResizeObserver(update);
+        if (containerRef.current) ro.observe(containerRef.current);
+        return () => ro.disconnect();
+    }, []);
 
     if (!gameState || !myPlayer) return null;
 
@@ -22,13 +37,22 @@ export function PlayerHand() {
         return !hasLeadingSuit;
     };
 
-    // Fan layout calculation
+    // Responsive card size
+    const cardW = containerWidth < 480 ? 52 : containerWidth < 640 ? 64 : 80;
+    const cardH = Math.round(cardW * 1.4);
+
+    // Fan layout: fit all cards within container with padding
     const cardCount = myPlayer.hand.length;
-    const maxFanAngle = Math.min(cardCount * 3, 30); // total spread angle
-    const overlap = Math.min(65, 700 / Math.max(cardCount, 1)); // card overlap in px
+    const maxFanAngle = Math.min(cardCount * 3, 30);
+    const availableWidth = containerWidth - 32; // 16px padding each side
+    // overlap so all cards fit: totalWidth = cardW + (n-1)*(cardW - overlap)
+    const minOverlap = cardCount > 1
+        ? Math.max(0, cardW - (availableWidth - cardW) / (cardCount - 1))
+        : 0;
+    const overlap = Math.min(cardW - 12, Math.max(minOverlap, cardW - 700 / Math.max(cardCount, 1)));
 
     return (
-        <div className="hand-area">
+        <div className="hand-area" ref={containerRef}>
             {/* Status */}
             <div className="status-bar">
                 {isPlayPhase && (
@@ -82,7 +106,7 @@ export function PlayerHand() {
                                 className="hand-card-wrapper"
                                 style={{
                                     zIndex: index,
-                                    marginLeft: index === 0 ? 0 : -(80 - overlap),
+                                    marginLeft: index === 0 ? 0 : -(overlap),
                                 }}
                                 initial={{ y: 80, opacity: 0, rotate: 0 }}
                                 animate={{
@@ -110,6 +134,8 @@ export function PlayerHand() {
                                     onClick={canPlay && playable ? () => playCard(card) : undefined}
                                     disabled={!canPlay || !playable}
                                     style={{
+                                        width: cardW,
+                                        height: cardH,
                                         filter: canPlay && !playable ? 'brightness(0.4)' : 'none',
                                     }}
                                 />

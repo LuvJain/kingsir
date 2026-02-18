@@ -104,14 +104,12 @@ export function aiPlayCard(
         // Try to win: play highest card in leading suit, or trump if possible
         if (leadingSuit) {
             const leadCards = validCards.filter(c => c.suit === leadingSuit);
-            if (leadCards.length > 0) {
-                return getHighestCard(leadCards);
-            }
+            if (leadCards.length > 0) return getHighestCard(leadCards);
             // Can't follow suit — play trump if we have it
             const trumpCards = validCards.filter(c => c.suit === trumpSuit);
-            if (trumpCards.length > 0) {
-                return getLowestCard(trumpCards); // lowest trump to save high trumps
-            }
+            if (trumpCards.length > 0) return getLowestCard(trumpCards);
+            // No leading suit and no trump — play highest available
+            return getHighestCard(validCards);
         } else {
             // Leading: play from strongest suit
             return getHighestCard(validCards);
@@ -122,9 +120,7 @@ export function aiPlayCard(
         // Try to lose: play lowest card
         if (leadingSuit) {
             const leadCards = validCards.filter(c => c.suit === leadingSuit);
-            if (leadCards.length > 0) {
-                return getLowestCard(leadCards);
-            }
+            if (leadCards.length > 0) return getLowestCard(leadCards);
             // Off-suit, play lowest non-trump
             const nonTrump = validCards.filter(c => c.suit !== trumpSuit);
             if (nonTrump.length > 0) return getLowestCard(nonTrump);

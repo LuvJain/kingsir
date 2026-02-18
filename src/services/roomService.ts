@@ -121,34 +121,67 @@ export async function startGame(roomCode: string, hostId: string): Promise<GameS
 
     if (playerEntries.length < 3) return null;
 
-    const players: PlayerState[] = playerEntries.map(([id, data]) => ({
-        id,
-        name: data.name,
-        hand: [],
-        bid: -1,
-        tricksWon: 0,
-        score: 0,
-        isAI: data.isAI,
-        aiDifficulty: data.aiDifficulty,
-        connected: true,
-    }));
+    const players: PlayerState[] = playerEntries.map(([id, data]) => {
+        const player: PlayerState = {
+            id,
+            name: data.name,
+            hand: [],
+            bid: -1,
+            tricksWon: 0,
+            score: 0,
+            isAI: data.isAI ?? false,
+            connected: true,
+        };
+        if (data.aiDifficulty) player.aiDifficulty = data.aiDifficulty;
+        return player;
+    });
 
     const gameState = initializeGame(roomCode, hostId, players);
 
     await update(ref(db, `rooms/${roomCode}`), { status: 'playing' });
-    await set(ref(db, `gameState/${roomCode}`), gameState);
+    await set(ref(db, `gameState/${roomCode}`), sanitizeGameState(gameState));
 
     return gameState;
 }
 
+// Strip undefined fields (Firebase rejects them) and convert empty arrays to empty objects
+// so Firebase doesn't drop them entirely on write
+function sanitizeGameState(gameState: GameState): any {
+    return {
+        ...gameState,
+        // Empty arrays become {} so Firebase keeps the key; normalizeGameState converts back
+        playedCards: gameState.playedCards.length > 0 ? gameState.playedCards : {},
+        players: gameState.players.map(p => {
+            const clean: any = {
+                ...p,
+                hand: p.hand.length > 0 ? p.hand : {},
+            };
+            Object.keys(clean).forEach(k => clean[k] === undefined && delete clean[k]);
+            return clean;
+        }),
+    };
+}
+
 export async function updateGameState(roomCode: string, gameState: GameState): Promise<void> {
-    await set(ref(db, `gameState/${roomCode}`), gameState);
+    await set(ref(db, `gameState/${roomCode}`), sanitizeGameState(gameState));
+}
+
+// Firebase converts arrays to objects on read, and drops empty arrays entirely — normalize back
+function normalizeGameState(raw: any): GameState {
+    return {
+        ...raw,
+        players: Object.values(raw.players || {}).map((p: any) => ({
+            ...p,
+            hand: Object.values(p.hand || []),
+        })),
+        playedCards: raw.playedCards ? Object.values(raw.playedCards) : [],
+    };
 }
 
 export function subscribeToGameState(roomCode: string, callback: (state: GameState | null) => void): () => void {
     const stateRef = ref(db, `gameState/${roomCode}`);
     const handler = onValue(stateRef, (snapshot) => {
-        callback(snapshot.exists() ? snapshot.val() as GameState : null);
+        callback(snapshot.exists() ? normalizeGameState(snapshot.val()) : null);
     });
     return () => off(stateRef, 'value', handler);
 }

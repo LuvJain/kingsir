@@ -215,6 +215,81 @@ body {
   color: var(--text-primary);
 }
 
+/* ─── How to Play ─── */
+.how-to-play {
+  width: 100%;
+  max-width: 400px;
+  margin: 12px auto 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.how-to-play-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.how-to-play-toggle:hover {
+  color: var(--text-primary);
+}
+
+.how-to-play-chevron {
+  font-size: 16px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.how-to-play-body {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.how-to-play-item {
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 10px;
+}
+
+.how-to-play-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.how-to-play-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ─── Phase Hints ─── */
+.phase-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 10px;
+  padding: 0 16px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
 /* ─── Waiting Room ─── */
 .room-code {
   text-align: center;
@@ -393,12 +468,16 @@ body {
 
 .played-cards-area {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: clamp(4px, 2vw, 12px);
   align-items: center;
   justify-content: center;
   min-height: 160px;
   position: relative;
   z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
 .played-card-slot {
@@ -492,16 +571,16 @@ body {
 }
 
 .card-large {
-  width: 90px;
-  height: 126px;
+  width: clamp(52px, 13vw, 90px);
+  height: clamp(73px, 18vw, 126px);
 }
 
 .card-large .card-rank {
-  font-size: 24px;
+  font-size: clamp(14px, 3.5vw, 24px);
 }
 
 .card-large .card-suit {
-  font-size: 34px;
+  font-size: clamp(20px, 5vw, 34px);
 }
 
 .card-winner {
@@ -510,27 +589,33 @@ body {
 
 /* ─── Player Hand ─── */
 .hand-area {
-  padding: 12px 20px 20px;
+  padding: 12px 16px 16px;
   background: var(--bg-secondary);
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 5;
-  min-height: 180px;
+  min-height: 160px;
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .hand-cards {
   display: flex;
   justify-content: center;
-  padding: 8px 0;
+  align-items: flex-end;
+  padding: 8px 0 4px;
   position: relative;
-  min-height: 130px;
+  min-height: 110px;
+  overflow: visible;
+  width: 100%;
 }
 
 .hand-card-wrapper {
   cursor: pointer;
-  transition: transform var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .hand-card-wrapper:hover {

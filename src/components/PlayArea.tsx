@@ -66,6 +66,19 @@ export function PlayArea() {
                             })}
                         </motion.div>
                     )}
+                    {isMyTurn && (() => {
+                        const biddersLeft = gameState.players.filter(p => p.bid < 0).length;
+                        const isLast = biddersLeft === 1;
+                        const totalSoFar = gameState.players.reduce((s, p) => s + (p.bid >= 0 ? p.bid : 0), 0);
+                        const forbidden = gameState.cardsPerPlayer - totalSoFar;
+                        return (
+                            <div className="phase-hint">
+                                {isLast
+                                    ? `You're last. You can't bid ${forbidden >= 0 ? forbidden : '?'} since bids can't total ${gameState.cardsPerPlayer}`
+                                    : 'Predict how many tricks you will win. Hit it exactly to score'}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -78,30 +91,35 @@ export function PlayArea() {
                             : `${gameState.players.find(p => p.id === gameState.highestBidderId)?.name} is choosing trump...`}
                     </div>
                     {gameState.highestBidderId === playerId && (
-                        <motion.div
-                            className="trump-suits"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {Object.values(Suit).map(suit => (
-                                <motion.button
-                                    key={suit}
-                                    className="trump-suit-btn"
-                                    onClick={() => selectTrump(suit)}
-                                    whileHover={{ y: -6, scale: 1.1 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <span
-                                        className="trump-suit-symbol"
-                                        style={{ color: SUIT_COLORS[suit] }}
+                        <>
+                            <motion.div
+                                className="trump-suits"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {Object.values(Suit).map(suit => (
+                                    <motion.button
+                                        key={suit}
+                                        className="trump-suit-btn"
+                                        onClick={() => selectTrump(suit)}
+                                        whileHover={{ y: -6, scale: 1.1 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
-                                        {SUIT_SYMBOLS[suit]}
-                                    </span>
-                                    <span className="trump-suit-label">{suit}</span>
-                                </motion.button>
-                            ))}
-                        </motion.div>
+                                        <span
+                                            className="trump-suit-symbol"
+                                            style={{ color: SUIT_COLORS[suit] }}
+                                        >
+                                            {SUIT_SYMBOLS[suit]}
+                                        </span>
+                                        <span className="trump-suit-label">{suit}</span>
+                                    </motion.button>
+                                ))}
+                            </motion.div>
+                            <div className="phase-hint">
+                                Pick your strongest suit. Trump cards beat everything else.
+                            </div>
+                        </>
                     )}
                 </div>
             )}
@@ -174,6 +192,15 @@ export function PlayArea() {
                             {isMyTurn ? 'Play a card to start the sir' : 'Waiting for play...'}
                         </motion.div>
                     )}
+                </div>
+            )}
+
+            {/* ─── Playing phase hint ─── */}
+            {gameState.phase === 'playing' && isMyTurn && (
+                <div className="phase-hint">
+                    {gameState.leadingSuit
+                        ? `You must follow ${gameState.leadingSuit} if you have it${gameState.trumpSuit ? `. Trump is ${SUIT_SYMBOLS[gameState.trumpSuit as Suit]} ${gameState.trumpSuit}` : ''}`
+                        : 'You lead this trick, play any card'}
                 </div>
             )}
 
