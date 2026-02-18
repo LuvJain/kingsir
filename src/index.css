@@ -56,20 +56,27 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100%;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ─── Lobby ─── */
@@ -81,8 +88,8 @@ body {
 }
 
 .lobby {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -446,8 +453,7 @@ body {
 
 /* ─── Game Board ─── */
 .game-board {
-  height: 100vh;
-  height: 100dvh; /* dynamic viewport — accounts for mobile browser chrome */
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
